@@ -1,0 +1,31 @@
+{:general
+ {:namespace tsunbot.commands.general
+
+  help
+  {:type     :command
+   :help     "Print the help text of a single command or the entire bot"
+   :max-args 1
+   :needs    [:commands :resolve-command]}
+
+  ping
+  {:type     :command
+   :help     "Replies with \"pong\". Very useful, i know"
+   :max-args 0}
+
+  pong
+  {:type    :alias
+   :command ping}
+
+  cycle-upper-lower
+  {:type     :command
+   :help     "Cycle between upper/lowercase, like the 'Autistic Spongebob' meme"
+   :min-args 1}
+
+  cycle
+  {:type    :alias
+   :command cycle-upper-lower}
+
+  anime
+  {:type :command
+   :help "Fetches the MAL list of the supplied user (or the current user if no name was given) and gets a random anime from it"
+   :max-args 1}}}
