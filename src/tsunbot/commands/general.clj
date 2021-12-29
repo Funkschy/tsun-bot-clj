@@ -1,7 +1,9 @@
 (ns tsunbot.commands.general
   (:require [clojure.string :as str]
+            [clojure.data.json :as json]
             [tsunbot.commands.specs :as s]
-            [clojure.data.json :as json])
+            [tsunbot.lib.anime :as anime])
+
   (:import java.net.URLEncoder))
 
 (defn map-join [separator mapper coll]
@@ -75,3 +77,15 @@
       (str username
            " does not seem to have a MAL account"))))
 
+(defn anime-backlog [[username & _] state env]
+  (let [username (or username (:username state))
+        backlog  (anime/fetch-behind-schedule username)]
+    (cond
+      (not-empty backlog)
+      (str/join \newline
+                (map #(str (% "title") ": " (% :behind) " episodes behind") backlog))
+
+      backlog
+      (str username " is up to date")
+      :else
+      (str username " does not seem to have a MAL account"))))

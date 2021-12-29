@@ -26,6 +26,15 @@
    :command cycle-upper-lower}
 
   anime
-  {:type :command
-   :help "Fetches the MAL list of the supplied user (or the current user if no name was given) and gets a random anime from it"
-   :max-args 1}}}
+  {:type     :command
+   :help     "Fetches the MAL list of the supplied user (or the current user if no name was given) and gets a random anime from it"
+   :max-args 1}
+
+  anime-backlog
+  {:type     :command
+   :help     "Check your anime backlog for the current season"
+   :max-args 1}
+
+  backlog
+  {:type    :alias
+   :command anime-backlog}}}
