@@ -19,7 +19,7 @@
           aliases                  (str/join " -> " alias-chain)]
       (if cmd-info
         (str "(" aliases "): " (:help cmd-info))
-        (str "No such command: " command)))
+        (format (:err-fmt state) command)))
 
     (letfn
       [(collect-optional [command k]
@@ -68,24 +68,15 @@
         animelist    (fetch-anime username)
         random-anime (first (shuffle (filter #(> (% "score") 7) (get animelist "anime"))))]
     (if random-anime
-      (str username
-           " strongly recommends '"
-           (random-anime "title")
-           "' (score: "
-           (random-anime "score")
-           ")")
-      (str username
-           " does not seem to have a MAL account"))))
+      (format (:succ-fmt state) username (random-anime "title") (random-anime "score"))
+      (format (:err-fmt state) username))))
 
 (defn anime-backlog [[username & _] state env]
   (let [username (or username (:username state))
         backlog  (anime/fetch-behind-schedule username)]
     (cond
       (not-empty backlog)
-      (str/join \newline
-                (map #(str (% "title") ": " (% :behind) " episodes behind") backlog))
+      (str/join \newline (map #(format (:succ-fmt state) (% "title") (% :behind)) backlog))
 
-      backlog
-      (str username " is up to date")
-      :else
-      (str username " does not seem to have a MAL account"))))
+      backlog (format (:no-anime-fmt state) username)
+      :else   (format (:err-fmt state) username))))

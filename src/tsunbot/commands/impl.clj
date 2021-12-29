@@ -31,12 +31,15 @@
 (defn select-relevant [m ks]
   (if ks (select-keys m ks) {}))
 
+(defn add-data [cmd-info context]
+  (if (:data cmd-info) (conj context (:data cmd-info)) context))
+
 (defn execute-single [[command & args] context]
   (when-let [[function cmd-info] (resolve-command command)]
     (if (and (check-num-args cmd-info args >= :min-args)
              (check-num-args cmd-info args <= :max-args))
       (function args
-                context
+                (add-data cmd-info context)
                 (select-relevant env (:needs cmd-info)))
       {:error  (str "Wrong number of args for " command ": " args)})))
 
