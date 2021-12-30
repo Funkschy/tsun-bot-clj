@@ -12,35 +12,41 @@
 (defn prefix-if [s prefix pred]
   (if (pred s) (str prefix s) s))
 
+(defn help-single [command state env]
+  (let [env @env
+        resolve-command          (:resolve-command env)
+        [_ cmd-info alias-chain] (resolve-command env command)
+        aliases                  (str/join " -> " alias-chain)]
+    (if cmd-info
+      (str "(" aliases "): " (:help cmd-info))
+      (format (:err-fmt state) command))))
+
+(defn help-all [env]
+  (letfn
+    [(collect-optional [command k]
+       (when (command k) (str (name k) ": " (k command))))
+
+     (collect-command [[n command]]
+       (when (= (:type command) :command)
+         (str (name n)
+              ": "
+              (:help command)
+              (prefix-if
+                (map-join ", " (partial collect-optional command) s/opt-command-config-params)
+                \newline
+                (partial not= "")))))
+
+     (collect-ns [[n commands]]
+       (str (name n)
+            ":"
+            \newline
+            (map-join "\n\n" collect-command (filter (comp symbol? first) commands))))]
+    (str \newline (map-join "\n-----\n" collect-ns (:commands @env)))))
+
 (defn help [[command & _] state env]
   (if command
-    (let [resolve-command          (:resolve-command env)
-          [_ cmd-info alias-chain] (resolve-command command)
-          aliases                  (str/join " -> " alias-chain)]
-      (if cmd-info
-        (str "(" aliases "): " (:help cmd-info))
-        (format (:err-fmt state) command)))
-
-    (letfn
-      [(collect-optional [command k]
-         (when (command k) (str (name k) ": " (k command))))
-
-       (collect-command [[n command]]
-         (when (= (:type command) :command)
-           (str (name n)
-                ": "
-                (:help command)
-                (prefix-if
-                  (map-join ", " (partial collect-optional command) s/opt-command-config-params)
-                  \newline
-                  (partial not= "")))))
-
-       (collect-ns [[n commands]]
-         (str (name n)
-              ":"
-              \newline
-              (map-join "\n\n" collect-command (filter (comp symbol? first) commands))))]
-      (str \newline (map-join "\n-----\n" collect-ns (:commands env))))))
+    (help-single command state env)
+    (help-all env)))
 
 (defn cycle-upper-lower [args state env]
   (apply str
@@ -80,3 +86,7 @@
 
       backlog (format (:no-anime-fmt state) username)
       :else   (format (:err-fmt state) username))))
+
+(defn reload-commands [args state env]
+  (swap! env (fn [env] (assoc env :commands ((:load-commands env)))))
+  (:succ-fmt state))
