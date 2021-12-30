@@ -12,9 +12,9 @@
   (log/info "loading commands.edn")
   (edn/read-string (slurp "commands.edn")))
 
-(defn resolve-command [env command]
+(defn resolve-command [commands command]
   ((fn inner [command alias-chain]
-     (let [general  (get-in env [:commands :general])
+     (let [general  (:general commands)
            cmd-info (general (symbol command))]
        (when cmd-info
          (if (= (:type cmd-info) :alias)
@@ -26,23 +26,30 @@
 
 (def env (atom {:commands        (load-commands)
                 :resolve-command resolve-command
-                :load-commands   load-commands}))
+                :reload-commands (fn []
+                                   (swap! env
+                                          (fn [env]
+                                            (assoc env :commands (load-commands)))))}))
 
 (defn check-num-args [cmd-info args f k]
   (if (k cmd-info)
     (f (count args) (k cmd-info))
     true))
 
+(defn select-relevant [m ks]
+  (if ks (select-keys m ks) {}))
+
 (defn add-data [cmd-info context]
   (if (:data cmd-info) (conj context (:data cmd-info)) context))
 
 (defn execute-single [[command & args] context]
-  (if-let [[function cmd-info] (resolve-command @env command)]
-    (if (and (check-num-args cmd-info args >= :min-args)
-             (check-num-args cmd-info args <= :max-args))
-      (function args (add-data cmd-info context) env)
-      {:error  (str "Wrong number of args for " command ": " args)})
-    {:error (str "No command called " command)}))
+  (let [env @env]
+    (if-let [[function cmd-info] (resolve-command (:commands env) command)]
+      (if (and (check-num-args cmd-info args >= :min-args)
+               (check-num-args cmd-info args <= :max-args))
+        (function args (add-data cmd-info context) (select-keys env (:needs cmd-info)))
+        {:error  (str "Wrong number of args for " command ": " args)})
+      {:error (str "No command called " command)})))
 
 (defn add-args [cmd piped-args]
   (if (nil? piped-args)

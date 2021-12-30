@@ -5,6 +5,7 @@
   {:type     :command
    :help     "Print the help text of a single command or the entire bot"
    :max-args 1
+   :needs    [:commands :resolve-command]
    :data     {:err-fmt "No such command: %s"}}
 
   ping
@@ -48,6 +49,7 @@
   {:type     :command
    :help     "Reload the commands.edn file"
    :max-args 0
+   :needs    [:reload-commands]
    :data     {:succ-fmt "Reloaded commands.edn"}}
 
   r

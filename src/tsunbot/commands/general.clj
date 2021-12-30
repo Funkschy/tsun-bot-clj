@@ -13,9 +13,8 @@
   (if (pred s) (str prefix s) s))
 
 (defn help-single [command state env]
-  (let [env @env
-        resolve-command          (:resolve-command env)
-        [_ cmd-info alias-chain] (resolve-command env command)
+  (let [resolve-command          (:resolve-command env)
+        [_ cmd-info alias-chain] (resolve-command (:commands env) command)
         aliases                  (str/join " -> " alias-chain)]
     (if cmd-info
       (str "(" aliases "): " (:help cmd-info))
@@ -41,7 +40,7 @@
             ":"
             \newline
             (map-join "\n\n" collect-command (filter (comp symbol? first) commands))))]
-    (str \newline (map-join "\n-----\n" collect-ns (:commands @env)))))
+    (str \newline (map-join "\n-----\n" collect-ns (:commands env)))))
 
 (defn help [[command & _] state env]
   (if command
@@ -88,5 +87,5 @@
       :else   (format (:err-fmt state) username))))
 
 (defn reload-commands [args state env]
-  (swap! env (fn [env] (assoc env :commands ((:load-commands env)))))
+  ((:reload-commands env))
   (:succ-fmt state))
