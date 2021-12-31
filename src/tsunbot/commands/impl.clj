@@ -5,6 +5,7 @@
             [clojure.tools.logging :as log]
             [clojure.core.async :as a]
 
+            [tsunbot.user :as user]
             [tsunbot.commands.general :as general]
             [tsunbot.commands.specs :as s]))
 
@@ -45,10 +46,15 @@
 (defn execute-single [[command & args] context]
   (let [env @env]
     (if-let [[function cmd-info] (resolve-command (:commands env) command)]
-      (if (and (check-num-args cmd-info args >= :min-args)
-               (check-num-args cmd-info args <= :max-args))
+      (cond
+        (not (user/has-sufficient-rights (:authorid context) (:min-role cmd-info)))
+        {:error (str (:username context) " has insufficient rights")}
+
+        (and (check-num-args cmd-info args >= :min-args)
+             (check-num-args cmd-info args <= :max-args))
         (function args (add-data cmd-info context) (select-keys env (:needs cmd-info)))
-        {:error  (str "Wrong number of args for " command ": " args)})
+
+        :else {:error  (str "Wrong number of args for " command ": " args)})
       {:error (str "No command called " command)})))
 
 (defn add-args [cmd piped-args]
@@ -56,8 +62,8 @@
     cmd
     (conj cmd piped-args)))
 
-(defn execute [commands {:keys [system username] :as context}]
-  (log/info system "command by" username ":" commands)
+(defn execute [commands {:keys [system username authorid] :as context}]
+  (log/info system "command by" username " (" authorid "):" commands)
   (reduce (fn [piped-args cmd]
             (let [command (add-args cmd piped-args)
                   result  (execute-single command context)]
@@ -69,8 +75,8 @@
 
 (defn dispatcher [command-ch event-ch]
   (loop []
-    (when-let [{:keys [commands username reply] :as context} (a/<!! command-ch)]
-      (if (and (= (first (first commands)) "quit") (= username "Funkschy"))
+    (when-let [{:keys [commands username authorid reply] :as context} (a/<!! command-ch)]
+      (if (and (= (first (first commands)) "quit") (user/has-sufficient-rights authorid :admin))
         (do (a/>!! event-ch [:quit nil])
             (log/info "dispatching quit event"))
 

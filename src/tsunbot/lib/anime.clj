@@ -1,8 +1,9 @@
 (ns tsunbot.lib.anime
   (:gen-class)
-  (:require [clojure.string :as str]
-            [clj-http.client :as client]
-            [clojure.data.json :as json])
+  (:require [clojure.tools.logging :as log]
+            [clojure.string :as str]
+            [clojure.data.json :as json]
+            [tsunbot.http :as http])
   (:import java.time.LocalDate
            java.net.URLEncoder))
 
@@ -29,16 +30,18 @@
                               "type"   "ANIME"
                               "year"   (str year \%)}}]
         (try
-          (get-in (-> (client/post "https://graphql.anilist.co"
-                                   {:headers {"Content-Type" "application/json"}
-                                    :body (json/write-str params)})
-                      (:body)
+          (get-in (-> (http/post-req "https://graphql.anilist.co"
+                                     {"Content-Type" "application/json"}
+                                     (json/write-str params))
+                      (.body)
                       (json/read-str))
                   ["data" "Page" "media"])
           (catch Exception e
+            (log/info e)
             nil))))))
 
 (defn fetch-mal-watching [username]
+  (log/info "Fetching watching list of" username)
   (letfn [(animelist-url [username]
             (str "https://api.jikan.moe/v3/user/"
                  (URLEncoder/encode username "UTF-8")
@@ -46,8 +49,8 @@
     (try
       (get (-> username
                (animelist-url)
-               (client/get)
-               (:body)
+               (http/get-req)
+               (.body)
                (json/read-str))
            "anime")
       (catch Exception e
@@ -84,4 +87,6 @@
              (map (partial apply merge))
              (map #(conj % [:behind (behind-schedule %)]))
              (filter (comp not zero? :behind)))))
-      (catch Exception e nil)))
+    (catch Exception e
+      (log/info e)
+      nil)))

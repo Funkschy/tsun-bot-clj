@@ -50,7 +50,8 @@
    :help     "Reload the commands.edn file"
    :max-args 0
    :needs    [:reload-commands]
-   :data     {:succ-fmt "Reloaded commands.edn"}}
+   :data     {:succ-fmt "Reloaded commands.edn"}
+   :min-role :admin}
 
   r
   {:type    :alias

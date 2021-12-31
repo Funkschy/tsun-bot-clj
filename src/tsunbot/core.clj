@@ -6,6 +6,7 @@
             [discljord.messaging :as m]
             [clojure.tools.logging :as log]
 
+            [tsunbot.db :as db]
             [tsunbot.commands.impl :as cmd]
             [tsunbot.discord :as discord]))
 
@@ -17,8 +18,11 @@
      command-ch (a/chan 100)
      dispatcher (future (cmd/dispatcher command-ch event-ch))]
 
-    (future (discord/connect event-ch command-ch config))
+    (prn (db/exec-query  "select * from user"))
+
+    (future (discord/connect event-ch command-ch (:discord config)))
     @dispatcher
 
+    (db/disconnect!)
     (a/close! event-ch)
     (a/close! command-ch)))

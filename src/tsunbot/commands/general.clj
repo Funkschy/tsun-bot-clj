@@ -1,6 +1,9 @@
 (ns tsunbot.commands.general
   (:require [clojure.string :as str]
             [clojure.data.json :as json]
+            [clojure.tools.logging :as log]
+
+            [tsunbot.http :as http]
             [tsunbot.commands.specs :as s]
             [tsunbot.lib.anime :as anime])
 
@@ -63,8 +66,9 @@
        "/animelist/completed"))
 
 (defn fetch-anime [username]
+  (log/info "Fetching completed list of" username)
   (try
-    (json/read-str (slurp (animelist-url username)))
+    (json/read-str (.body (http/get-req (animelist-url username))))
     (catch Exception e
       nil)))
 
