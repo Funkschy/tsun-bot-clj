@@ -1,9 +1,9 @@
 (ns tsunbot.http
-  (:import java.net.http.HttpRequest)
-  (:import java.net.http.HttpRequest$BodyPublishers)
-  (:import java.net.http.HttpResponse$BodyHandlers)
-  (:import java.net.http.HttpClient)
-  (:import java.net.URI))
+  (:import java.net.http.HttpRequest
+           java.net.http.HttpRequest$BodyPublishers
+           java.net.http.HttpResponse$BodyHandlers
+           java.net.http.HttpClient
+           java.net.URI))
 
 (defn get-req [url]
   (let [c   (HttpClient/newHttpClient)

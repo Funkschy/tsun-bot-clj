@@ -1,0 +1,6 @@
+{:log {:level               :info
+       :file                "out.log"
+       :append              true
+       :date-time-formatter "yyyy-MM-dd HH:mm:ss"}
+ :discord {:token   ""
+           :intents #{:guilds :guild-messages :direct-messages}}}

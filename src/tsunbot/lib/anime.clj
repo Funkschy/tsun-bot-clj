@@ -75,11 +75,15 @@
      (-> date (.getMonthValue) (dec) (seasons))]))
 
 (defn fetch-behind-schedule [mal-username]
+  (log/info "Fetching behind schedule anime for" mal-username)
   (try
     (let
       [mal-data (fetch-mal-watching mal-username)
        ani-data (apply fetch-anilist-airing (get-year-and-season))]
+      (when (nil? mal-data)
+        (log/error "could not fetch mal data for" mal-username))
       (when (and mal-data ani-data)
+        (log/info mal-username "is watching" (count mal-data) "shows")
         (->> (concat mal-data ani-data)
              (group-by #(get % "mal_id"))
              (vals)

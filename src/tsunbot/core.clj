@@ -18,8 +18,6 @@
      command-ch (a/chan 100)
      dispatcher (future (cmd/dispatcher command-ch event-ch))]
 
-    (prn (db/exec-query  "select * from user"))
-
     (future (discord/connect event-ch command-ch (:discord config)))
     @dispatcher
 

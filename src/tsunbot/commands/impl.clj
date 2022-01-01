@@ -63,7 +63,7 @@
     (conj cmd piped-args)))
 
 (defn execute [commands {:keys [system username authorid] :as context}]
-  (log/info system "command by" username " (" authorid "):" commands)
+  (log/info system "command by" username "(" authorid "):" commands)
   (reduce (fn [piped-args cmd]
             (let [command (add-args cmd piped-args)
                   result  (execute-single command context)]
