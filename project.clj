@@ -1,5 +1,5 @@
 (defproject tsunbot2 "0.1.0-SNAPSHOT"
-  :description "FIXME: write description"
+  :description "Tsundere Chatbot"
   :url "https://github.com/funkschy/tsun-bot-clj"
   :license {:name "MIT"}
   :dependencies [[org.clojure/clojure "1.10.1"]
