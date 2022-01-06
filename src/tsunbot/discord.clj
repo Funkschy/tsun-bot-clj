@@ -14,8 +14,9 @@
 
 (defmethod handle-event :message-create
   [event-type
-   {{username :username, bot :bot, authorid :id, :as author} :author :keys [channel-id content]}
-   {:keys [message-ch command-ch]}]
+   {{username :username, bot :bot, authorid :id, :as author} :author
+    :keys [channel-id content guild-id]}
+   {:keys [message-ch command-ch connection-ch request-ch]}]
   (let
     [send-msg (fn [content] (m/create-message! message-ch channel-id :content content))
      reply    (fn [content] (send-msg (str "<@" authorid "> " content)))
@@ -23,9 +24,16 @@
     (when (and (not bot) commands)
       (a/put! command-ch
               (merge {:system :discord}
-                     (create-map commands send-msg reply authorid username))))))
+                     (create-map commands
+                                 send-msg
+                                 reply
+                                 authorid
+                                 username
+                                 guild-id
+                                 message-ch))))))
 
-(defmethod handle-event :default [event-type event-data state])
+(defmethod handle-event :default [event-type event-data {request-ch :request-ch}]
+  (log/info "received unhandled" event-type "discord event"))
 
 (defn dispatch-discord-event [state event-type event-data]
   (handle-event event-type event-data state))
@@ -34,7 +42,7 @@
   (let
     [connection-ch (c/connect-bot! token event-ch :intents intents)
      message-ch    (m/start-connection! token)
-     state         (create-map command-ch message-ch)]
+     state         (create-map command-ch message-ch connection-ch)]
 
     (try
       (loop []
@@ -42,7 +50,8 @@
           (when-not (= :quit event-type)
             (dispatch-discord-event state event-type event-data)
             (recur))))
-
+      (catch Exception e
+        (log/error e))
       (finally
         (log/info "disconnecting Discord")
         (c/disconnect-bot!  connection-ch)

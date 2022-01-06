@@ -1,4 +1,4 @@
-(ns tsunbot.commands.impl
+(ns tsunbot.commands.dispatch
   (:require [clojure.edn :as edn]
             [clojure.spec.alpha :as spec]
             [clojure.string :as str]
@@ -6,21 +6,34 @@
             [clojure.core.async :as a]
 
             [tsunbot.user :as user]
-            [tsunbot.commands.general :as general]
+            [tsunbot.commands.general]
+            [tsunbot.commands.discord]
             [tsunbot.commands.specs :as s]))
 
 (defn load-commands []
   (log/info "loading commands.edn")
   (edn/read-string (slurp "commands.edn")))
 
+(defn lookup-command-in [commands command system]
+  (let [sys (system commands)
+        cmd (sys command)]
+    (when cmd
+      [cmd sys])))
+
+(defn lookup-command [commands command]
+  (let [systems (keys commands)
+        lookup  (partial lookup-command-in commands command)]
+    (first (filter (comp not nil?) (map lookup systems)))))
+
+
 (defn resolve-command [commands command]
   ((fn inner [command alias-chain]
-     (let [general  (:general commands)
-           cmd-info (general (symbol command))]
+     (let [cmd-sym (symbol command)
+           [cmd-info sys] (lookup-command commands cmd-sym)]
        (when cmd-info
          (if (= (:type cmd-info) :alias)
            (inner (:command cmd-info) (conj alias-chain command))
-           (when-let [function (ns-resolve (:namespace general) (symbol command))]
+           (when-let [function (ns-resolve (:namespace sys) cmd-sym)]
              [function cmd-info (conj alias-chain command)])))))
 
    command []))

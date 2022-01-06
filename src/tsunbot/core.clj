@@ -2,12 +2,10 @@
   (:gen-class)
   (:require [clojure.edn :as edn]
             [clojure.core.async :as a]
-            [discljord.connections :as c]
-            [discljord.messaging :as m]
             [clojure.tools.logging :as log]
 
             [tsunbot.db :as db]
-            [tsunbot.commands.impl :as cmd]
+            [tsunbot.commands.dispatch :as cmd]
             [tsunbot.discord :as discord]))
 
 (def config (edn/read-string (slurp "config.edn")))
