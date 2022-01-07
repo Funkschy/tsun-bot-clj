@@ -65,5 +65,15 @@
    :help     "Get the Discord user id for some username"
    :max-args 1
    :needs    []
-   :data     {:err-fmt "No user called %s"}}}}
+   :data     {:err-fmt "No user called %s"}}
+
+  set-role
+  {:type     :command
+   :help     "Set the role of a user [none, mod, admin]"
+   :min-role :admin
+   :min-args 2
+   :max-args 2
+   :data     {:self-set-fmt     "Cannot set own role"
+              :no-user-fmt      "No user called %s"
+              :invalid-role-fmt "Invalid role: %s"}}}}
 

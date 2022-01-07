@@ -4,6 +4,7 @@
             [discljord.messaging :as m]
             [clojure.tools.logging :as log]
 
+            [tsunbot.sql_statements :as sql]
             [tsunbot.commands.specs :as s]
             [tsunbot.commands.parse :as p]))
 
@@ -42,10 +43,14 @@
 
 (defrecord DiscordApiWrapper [message-ch]
   s/ApiWrapper
-  (get-user-by-name [this {:keys [res-promise guild-id username]}]
-    (fullfill res-promise m/search-guild-members! message-ch guild-id username)))
 
-(defn dispatch-request [{:keys [request-ch message-ch]}]
+  (get-user-by-name [this {:keys [res-promise guild-id username]}]
+    (fullfill res-promise m/search-guild-members! message-ch guild-id username))
+
+  (set-user-role [this {:keys [userid role]}]
+    (sql/set-role userid role)))
+
+(defn dispatch-request [{:keys [request-ch message-ch db-conn]}]
   (let [api-wrapper (DiscordApiWrapper. message-ch)]
     (loop []
       (let [{:keys [method] :as req} (a/<!! request-ch)]

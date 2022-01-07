@@ -68,7 +68,11 @@
 (defn fetch-anime [username]
   (log/info "Fetching completed list of" username)
   (try
-    (json/read-str (.body (http/get-req (animelist-url username))))
+    (let [res (http/get-req (animelist-url username))]
+      (if (= 200 (.statusCode res))
+        (json/read-str (.body res))
+        (do (log/error "could not get MAL completed list:" (.statusCode res) (.body res))
+            nil)))
     (catch Exception e
       (log/error "could not get MAL completed list" e)
       nil)))

@@ -8,9 +8,10 @@
 (def rev-roles (clojure.set/map-invert roles))
 
 (defn get-num-role [userid]
-  (->> (db/exec-query "select role from user where id = ?" userid)
-       (first)
-       (:role)))
+  (or (->> (db/exec-query "select role from user where id = ?" userid)
+           (first)
+           (:role))
+      0))
 
 (defn get-role [userid]
   (rev-roles (get-num-role userid)))

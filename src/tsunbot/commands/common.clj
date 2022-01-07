@@ -10,6 +10,11 @@
                  (apply hash-map args)))
     @result))
 
+(defn set-user-role [id new-role {:keys [request-ch]}]
+  (a/>!! request-ch {:method s/set-user-role,
+                     :userid id,
+                     :role new-role}))
+
 (defn get-user-by-name [username {:keys [request-ch guild-id]}]
   (first (request-sync request-ch
                        s/get-user-by-name
