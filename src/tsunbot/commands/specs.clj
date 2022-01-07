@@ -4,5 +4,10 @@
 
 (s/def :tsunbot/command (s/and string? #(starts-with? % "!")))
 
-(def opt-command-config-params [:min-args :max-args])
-(s/def :tsunbot/opt-command-config-param (into #{} opt-command-config-params))
+(defprotocol ApiWrapper
+  "A wrapper for a platform specific api"
+  (get-user-by-name [this req]
+                    "Get a (platform specific) user object from the username"))
+
+(def opt-command-config-params [:tsunbot/min-args :max-args :data :needs :min-role])
+(def req-command-config-params [:type :help])

@@ -70,6 +70,7 @@
   (try
     (json/read-str (.body (http/get-req (animelist-url username))))
     (catch Exception e
+      (log/error "could not get MAL completed list" e)
       nil)))
 
 (defn anime [[username & _] state env]

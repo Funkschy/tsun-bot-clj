@@ -54,6 +54,7 @@
                (json/read-str))
            "anime")
       (catch Exception e
+        (log/error "could not fetch MAL watching" e)
         nil))))
 
 (defn current-episode [anime-info]

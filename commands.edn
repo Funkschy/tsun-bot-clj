@@ -63,7 +63,6 @@
   userid
   {:type     :command
    :help     "Get the Discord user id for some username"
-   :min-args 1
    :max-args 1
    :needs    []
    :data     {:err-fmt "No user called %s"}}}}
