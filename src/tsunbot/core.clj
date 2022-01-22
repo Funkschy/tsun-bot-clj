@@ -12,13 +12,12 @@
 
 (defn -main[& args]
   (let
-    [event-ch   (a/chan 100)
-     command-ch (a/chan 100)
-     dispatcher (future (cmd/dispatcher command-ch event-ch))]
+    [command-ch (a/chan 100)
+     dispatcher (a/go (cmd/dispatcher command-ch))]
 
-    (future (discord/connect event-ch command-ch (:discord config)))
-    @dispatcher
+    (a/go (discord/connect command-ch (:discord config)))
+
+    (a/<!! dispatcher)
 
     (db/disconnect!)
-    (a/close! event-ch)
     (a/close! command-ch)))

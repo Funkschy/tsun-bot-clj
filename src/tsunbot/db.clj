@@ -28,7 +28,7 @@
 (defn exec-update [statement & args]
   (let [s (.prepareStatement @connection statement)]
     (try
-      (log/info "Executing" statement "with args:" args)
+      (log/info "Executing" statement "with" (count args) "args")
       (doseq [[i a] (map vector (range) args)] ((setter (type a)) s (inc i) a))
       (.executeUpdate s)
       (finally (.close s)))))

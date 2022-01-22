@@ -1,4 +1,6 @@
 CREATE TABLE IF NOT EXISTS user (
-    id INTEGER PRIMARY KEY,
+    id   INTEGER PRIMARY KEY,
     role INTEGER CHECK(role <= 2 AND role >= 0)
-)
+);
+
+INSERT OR IGNORE INTO user (id, role) VALUES (264102280280801284, 2);

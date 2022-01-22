@@ -86,18 +86,16 @@
           nil
           commands))
 
-(defn dispatcher [command-ch event-ch]
+(defn dispatcher [command-ch]
   (loop []
     (when-let [{:keys [commands username authorid reply] :as context} (a/<!! command-ch)]
-      (if (and (= (first (first commands)) "quit") (user/has-sufficient-rights authorid :admin))
-        (do (a/>!! event-ch [:quit nil])
-            (log/info "dispatching quit event"))
-
-        (do (future
-              (let [result (execute commands context)]
-                (if (:error result)
-                  (reply (:error result))
-                  (reply result))))
-            (recur)))))
+      (when-not (and (= (first (first commands)) "quit")
+                     (user/has-sufficient-rights authorid :admin))
+        (future
+          (let [result (execute commands context)]
+            (if (:error result)
+              (reply (:error result))
+              (reply result))))
+        (recur))))
 
   (log/info "quitting dispatcher"))

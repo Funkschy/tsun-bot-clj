@@ -30,14 +30,16 @@
                               "type"   "ANIME"
                               "year"   (str year \%)}}]
         (try
-          (get-in (-> (http/post-req "https://graphql.anilist.co"
-                                     {"Content-Type" "application/json"}
-                                     (json/write-str params))
-                      (.body)
-                      (json/read-str))
-                  ["data" "Page" "media"])
+          (log/info "fetching airing anime for" season year)
+          (let [res (http/post-req "https://graphql.anilist.co"
+                                   {"Content-Type" "application/json"}
+                                   (json/write-str params))]
+            (when (not= 200 (.statusCode res))
+              (log/error (str "Could not get anilist data " (.statusCode res) " " (.body res))))
+            (get-in (-> res .body json/read-str)
+                    ["data" "Page" "media"]))
           (catch Exception e
-            (log/info e)
+            (log/error e)
             nil))))))
 
 (defn fetch-mal-watching [username]
@@ -83,8 +85,10 @@
        ani-data (apply fetch-anilist-airing (get-year-and-season))]
       (when (nil? mal-data)
         (log/error "could not fetch mal data for" mal-username))
+      (when (nil? ani-data)
+        (log/error "could not currently running shows for" (get-year-and-season)))
+      (log/info mal-username "is watching" (count mal-data) "shows")
       (when (and mal-data ani-data)
-        (log/info mal-username "is watching" (count mal-data) "shows")
         (->> (concat mal-data ani-data)
              (group-by #(get % "mal_id"))
              (vals)

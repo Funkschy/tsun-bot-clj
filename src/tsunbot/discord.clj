@@ -57,29 +57,28 @@
         (method api-wrapper req))
       (recur))))
 
-(defn dispatch-discord-event [state event-type event-data]
-  (handle-event event-type event-data state))
-
-(defn connect [event-ch command-ch {token :token intents :intents}]
+(defn connect [command-ch {token :token intents :intents}]
   (let
-    [connection-ch (c/connect-bot! token event-ch :intents intents)
+    [event-ch      (a/chan 100)
+     connection-ch (c/connect-bot! token event-ch :intents intents)
      message-ch    (m/start-connection! token)
      request-ch    (a/chan 100)
      state         (create-map command-ch message-ch connection-ch request-ch)]
 
     (try
-      (future (dispatch-request state))
+      (a/go (dispatch-request state))
 
       (loop []
         (let [[event-type event-data] (a/<!! event-ch)]
-          (when-not (= :quit event-type)
-            (dispatch-discord-event state event-type event-data)
-            (recur))))
+          (handle-event event-type event-data state)
+          (recur)))
+
       (catch Exception e
         (log/error e))
       (finally
         (log/info "disconnecting Discord")
         (a/close! request-ch)
         (c/disconnect-bot!  connection-ch)
-        (m/stop-connection! message-ch)))))
+        (m/stop-connection! message-ch)
+        (a/close! event-ch)))))
 
