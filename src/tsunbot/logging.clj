@@ -2,7 +2,8 @@
   (:require [clojure.string :as str]
             [clojure.tools.logging.impl :as log]
             [clojure.edn :as edn])
-  (:import java.util.logging.Logger
+  (:import java.util.logging.LogRecord
+           java.util.logging.Logger
            java.util.logging.FileHandler
            java.util.logging.Formatter
            java.util.logging.SimpleFormatter
@@ -10,6 +11,19 @@
            java.time.Instant
            java.time.ZoneId
            java.time.format.DateTimeFormatter))
+
+(def java-levels {:trace java.util.logging.Level/FINEST
+                  :debug java.util.logging.Level/FINE
+                  :info  java.util.logging.Level/INFO
+                  :warn  java.util.logging.Level/WARNING
+                  :error java.util.logging.Level/SEVERE
+                  :fatal java.util.logging.Level/SEVERE})
+
+(def level-strings {java.util.logging.Level/FINEST  "TRACE"
+                    java.util.logging.Level/FINE    "DEBUG"
+                    java.util.logging.Level/INFO    "INFO"
+                    java.util.logging.Level/WARNING "WARNING"
+                    java.util.logging.Level/SEVERE  "ERROR"})
 
 (defn millis-to-localdate [millis]
   (-> (Instant/ofEpochMilli millis) (.atZone (ZoneId/systemDefault)) (.toLocalDateTime)))
@@ -35,21 +49,15 @@
 (defn formatter [time-fmt-string]
   (let [formatter (date-time-formatter time-fmt-string)]
     (proxy [Formatter] []
-      (format [record]
+      (format [^LogRecord record]
         (format-record formatter
-                       (.getLevel record)
+                       (get level-strings (.getLevel record))
                        (.getMillis record)
                        (.getMessage record))))))
 
 
 (defn create-logger [config]
-  (let [java-levels     {:trace java.util.logging.Level/FINEST
-                         :debug java.util.logging.Level/FINE
-                         :info  java.util.logging.Level/INFO
-                         :warn  java.util.logging.Level/WARNING
-                         :error java.util.logging.Level/SEVERE
-                         :fatal java.util.logging.Level/SEVERE}
-        append          (boolean (:append config))
+  (let [append          (boolean (:append config))
         limit           (or (:limit config) 4096)
         cnt             (or (:count config) 2)
         time-fmt-string (or (:date-time-formatter config) "yyyy-MM-dd HH:mm:ss")
