@@ -37,13 +37,15 @@
 (defn fmt-timestamp [formatter millis]
   (-> formatter (.format (millis-to-localdate millis))))
 
-(defn format-record [time-formatter level millis message]
+(defn format-record [time-formatter level millis message thrown]
   (str level
        " ("
        (fmt-timestamp time-formatter millis)
        ")"
        ": "
        message
+       " "
+       thrown
        \newline))
 
 (defn formatter [time-fmt-string]
@@ -53,7 +55,8 @@
         (format-record formatter
                        (get level-strings (.getLevel record))
                        (.getMillis record)
-                       (.getMessage record))))))
+                       (.getMessage record)
+                       (.getThrown record))))))
 
 
 (defn create-logger [config]

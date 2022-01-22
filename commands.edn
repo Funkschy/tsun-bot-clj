@@ -55,7 +55,15 @@
 
   r
   {:type    :alias
-   :command reload-commands}}
+   :command reload-commands}
+
+  mal-diff
+  {:type     :command
+   :help     "Find the anime with the biggest score difference of two users"
+   :min-args 1
+   :max-args 2
+   :data     {:succ-fmt "You seem to disagree on %s, %s rated it %d, but %s rated it %d"
+              :err-fmt  "Could not get MAL data. Do all supplied users really exists?"}}}
 
  :discord
  {:namespace tsunbot.commands.discord

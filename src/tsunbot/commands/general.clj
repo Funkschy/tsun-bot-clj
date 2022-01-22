@@ -60,27 +60,10 @@
 (defn ping [args state env]
   "pong")
 
-(defn animelist-url [username]
-  (str "https://api.jikan.moe/v3/user/"
-       (URLEncoder/encode username "UTF-8")
-       "/animelist/completed"))
-
-(defn fetch-anime [username]
-  (log/info "Fetching completed list of" username)
-  (try
-    (let [res (http/get-req (animelist-url username))]
-      (if (= 200 (.statusCode res))
-        (json/read-str (.body res))
-        (do (log/error "could not get MAL completed list:" (.statusCode res) (.body res))
-            nil)))
-    (catch Exception e
-      (log/error "could not get MAL completed list" e)
-      nil)))
-
 (defn anime [[username & _] state env]
   (let [username     (or username (:username state))
-        animelist    (fetch-anime username)
-        random-anime (first (shuffle (filter #(> (% "score") 7) (get animelist "anime"))))]
+        animelist    (anime/fetch-completed username)
+        random-anime (first (shuffle (filter #(> (% "score") 7) animelist)))]
     (if random-anime
       (format (:succ-fmt state) username (random-anime "title") (random-anime "score"))
       (format (:err-fmt state) username))))
@@ -94,6 +77,14 @@
 
       backlog (format (:no-anime-fmt state) username)
       :else   (format (:err-fmt state) username))))
+
+(defn mal-diff [[username-1 username-2 & _] state env]
+  (let [users    (if (nil? username-2) [(:username state) username-1] [username-1 username-2])
+        max-diff (apply anime/find-max-diff-anime users)
+        scores   (flatten (into [] (:scores max-diff)))]
+    (if max-diff
+      (apply format (:succ-fmt state) (:title max-diff) scores)
+      (:err-fmt state))))
 
 (defn reload-commands [args state env]
   ((:reload-commands env))

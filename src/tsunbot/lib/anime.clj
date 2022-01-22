@@ -42,22 +42,35 @@
             (log/error e)
             nil))))))
 
+(defn animelist-url [username endpoint]
+  (str "https://api.jikan.moe/v3/user/"
+       (URLEncoder/encode username "UTF-8")
+       endpoint))
+
+(defn fetch-api [url data-name ]
+  (log/info "Fetching" data-name)
+  (try
+    (let [res (http/get-req url)]
+      (if (= 200 (.statusCode res))
+        (json/read-str (.body res))
+        (do (log/error "could not get" data-name ":" (.statusCode res) (.body res))
+            nil)))
+    (catch Exception e
+      (log/error e "error while trying to get" data-name)
+      nil)))
+
 (defn fetch-mal-watching [username]
-  (log/info "Fetching watching list of" username)
-  (letfn [(animelist-url [username]
-            (str "https://api.jikan.moe/v3/user/"
-                 (URLEncoder/encode username "UTF-8")
-                 "/animelist/watching"))]
-    (try
-      (get (-> username
-               (animelist-url)
-               (http/get-req)
-               (.body)
-               (json/read-str))
-           "anime")
-      (catch Exception e
-        (log/error "could not fetch MAL watching" e)
-        nil))))
+  (get (-> username
+           (animelist-url "/animelist/watching")
+           (fetch-api (str "MAL watching list for " username)))
+       "anime"))
+
+
+(defn fetch-completed [username]
+  (get (-> username
+           (animelist-url "/animelist/completed")
+           (fetch-api (str "MAL completed list for " username)))
+       "anime"))
 
 (defn current-episode [anime-info]
   (if (anime-info "nextAiringEpisode")
@@ -99,3 +112,24 @@
     (catch Exception e
       (log/info e)
       nil)))
+
+(defn fetch-common-anime [users]
+  (letfn [(extract   [anime] {:title (anime "title") :score (anime "score")})
+          (mapper    [user]  (map #(conj (extract %) [:user user]) (fetch-completed user)))]
+    (->> (map mapper users)
+         flatten
+         (group-by :title)
+         (filter #(> (count (second %)) 1)))))
+
+(defn find-max-diff-anime [mal-username-1 mal-username-2]
+  (letfn [(abs        [x] (if (< x 0) (- x) x))
+          (score-diff [[title [{score1 :score} {score2 :score}]]] (abs (- score1 score2)))
+          (merge-res  [[_ [{title :title score-1 :score user-1 :user}
+                           {score-2 :score user-2 :user}]]]
+            {:title title :scores {user-1 score-1 user-2 score-2}})]
+    (let [common-anime (->> [mal-username-1 mal-username-2]
+                            fetch-common-anime
+                            ; if multiple anime have the same score-diff, we want a random one
+                            shuffle)]
+      (when-not (empty? common-anime)
+        (merge-res (apply max-key score-diff common-anime))))))
