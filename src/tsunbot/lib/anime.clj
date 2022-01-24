@@ -118,6 +118,7 @@
           (mapper    [user]  (map #(conj (extract %) [:user user]) (fetch-completed user)))]
     (->> (map mapper users)
          flatten
+         (filter (comp not zero? :score))
          (group-by :title)
          (filter #(> (count (second %)) 1)))))
 
