@@ -13,3 +13,4 @@ pom.xml.asc
 config.edn
 bot.db
 log
+deploy.sh
