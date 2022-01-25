@@ -5,9 +5,7 @@
 
             [tsunbot.http :as http]
             [tsunbot.commands.specs :as s]
-            [tsunbot.lib.anime :as anime])
-
-  (:import java.net.URLEncoder))
+            [tsunbot.lib.anime :as anime]))
 
 (defn map-join [separator mapper coll]
   (str/join separator (remove nil? (map mapper coll))))
@@ -62,7 +60,7 @@
 
 (defn anime [[username & _] state env]
   (let [username     (or username (:username state))
-        animelist    (anime/fetch-completed username)
+        animelist    (anime/fetch-mal-completed username)
         random-anime (first (shuffle (filter #(> (% "score") 7) animelist)))]
     (if random-anime
       (format (:succ-fmt state) username (random-anime "title") (random-anime "score"))

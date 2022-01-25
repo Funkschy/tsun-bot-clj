@@ -1,11 +1,15 @@
 (ns tsunbot.lib.anime
   (:gen-class)
-  (:require [clojure.tools.logging :as log]
+  (:require [clojure.edn :as edn]
+            [clojure.tools.logging :as log]
             [clojure.string :as str]
             [clojure.data.json :as json]
+            [clojure.set :refer [rename-keys]]
             [tsunbot.http :as http])
   (:import java.time.LocalDate
            java.net.URLEncoder))
+
+(def client-id (get-in (edn/read-string (slurp "config.edn")) [:mal :client-id]))
 
 (def fetch-anilist-airing
   (memoize
@@ -42,43 +46,13 @@
             (log/error e)
             nil))))))
 
-(defn animelist-url [username endpoint]
-  (str "https://api.jikan.moe/v3/user/"
-       (URLEncoder/encode username "UTF-8")
-       endpoint))
-
-(defn fetch-api [url data-name ]
-  (log/info "Fetching" data-name)
-  (try
-    (let [res (http/get-req url)]
-      (if (= 200 (.statusCode res))
-        (json/read-str (.body res))
-        (do (log/error "could not get" data-name ":" (.statusCode res) (.body res))
-            nil)))
-    (catch Exception e
-      (log/error e "error while trying to get" data-name)
-      nil)))
-
-(defn fetch-mal-watching [username]
-  (get (-> username
-           (animelist-url "/animelist/watching")
-           (fetch-api (str "MAL watching list for " username)))
-       "anime"))
-
-
-(defn fetch-completed [username]
-  (get (-> username
-           (animelist-url "/animelist/completed")
-           (fetch-api (str "MAL completed list for " username)))
-       "anime"))
-
 (defn current-episode [anime-info]
   (if (anime-info "nextAiringEpisode")
     (dec (get-in anime-info ["nextAiringEpisode" "episode"]))
     (anime-info "episodes")))
 
 (defn behind-schedule [anime-info]
-  (let [watched (anime-info "watched_episodes")
+  (let [watched (anime-info "num_episodes_watched")
         current (current-episode anime-info)]
     (if (and current watched )
       (- current watched)
@@ -89,6 +63,46 @@
         date    (LocalDate/now)]
     [(.getYear date)
      (-> date (.getMonthValue) (dec) (seasons))]))
+
+(defn fetch-mal-api [url params data-name]
+  (log/info "Fetching" data-name)
+  (try
+    (let [res (http/get-req (http/url-encode-params url params) {"X-MAL-CLIENT-ID" client-id})]
+      (if (= 200 (.statusCode res))
+        (json/read-str (.body res))
+        (do (log/error "could not get" data-name ":" (.statusCode res) (.body res))
+            nil)))
+    (catch Exception e
+      (log/error e "error while trying to get" data-name)
+      nil)))
+
+(defn fetch-mal-api-seq
+  "Creates a lazy sequence of paging entries, which will only perform their request when consumed"
+  [start-url params data-name]
+  (letfn [(inner [url]
+            (when-not (nil? url)
+              (lazy-seq
+                (let [{data "data" {next-url "next"} "paging" } (fetch-mal-api url params data-name)]
+                  (cons (map #(apply conj (vals %)) data)
+                        (inner next-url))))))]
+    (flatten (inner start-url))))
+
+(defn mal-url [username endpoint]
+  (str "https://api.myanimelist.net/v2/users/"
+       (URLEncoder/encode username "UTF-8")
+       endpoint))
+
+(defn fetch-mal-watching [username]
+  (fetch-mal-api-seq
+    (mal-url username "/animelist")
+    {"fields" "list_status" "status" "watching" "limit" 500}
+    "MAL watching list"))
+
+(defn fetch-mal-completed [username]
+  (fetch-mal-api-seq
+    (mal-url username "/animelist")
+    {"fields" "list_status" "status" "completed" "limit" 500}
+    "MAL completed list"))
 
 (defn fetch-behind-schedule [mal-username]
   (log/info "Fetching behind schedule anime for" mal-username)
@@ -102,20 +116,21 @@
         (log/error "could not currently running shows for" (get-year-and-season)))
       (log/info mal-username "is watching" (count mal-data) "shows")
       (when (and mal-data ani-data)
-        (->> (concat mal-data ani-data)
+        (->> (concat (map #(rename-keys % {"id" "mal_id"}) mal-data) ani-data)
              (group-by #(get % "mal_id"))
              (vals)
              (filter #(= 2 (count %)))
              (map (partial apply merge))
              (map #(conj % [:behind (behind-schedule %)]))
              (filter (comp not zero? :behind)))))
+
     (catch Exception e
       (log/info e)
       nil)))
 
 (defn fetch-common-anime [users]
   (letfn [(extract   [anime] {:title (anime "title") :score (anime "score")})
-          (mapper    [user]  (map #(conj (extract %) [:user user]) (fetch-completed user)))]
+          (mapper    [user]  (map #(conj (extract %) [:user user]) (fetch-mal-completed user)))]
     (->> (map mapper users)
          flatten
          (filter (comp not zero? :score))
