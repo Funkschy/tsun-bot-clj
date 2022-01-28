@@ -1,8 +1,9 @@
 (ns tsunbot.discord
   (:require [clojure.core.async :as a]
+            [clojure.tools.logging :as log]
+            [clojure.string :as str]
             [discljord.connections :as c]
             [discljord.messaging :as m]
-            [clojure.tools.logging :as log]
 
             [tsunbot.sql_statements :as sql]
             [tsunbot.commands.specs :as s]
@@ -20,7 +21,11 @@
     :keys [channel-id content guild-id]}
    {:keys [message-ch command-ch connection-ch request-ch]}]
   (let
-    [send-msg (fn [content] (m/create-message! message-ch channel-id :content content))
+    [send-msg (fn [content]
+                (doseq [content-chunk (partition-all 2000 content)] ; max message length
+                  (m/create-message! message-ch
+                                     channel-id
+                                     :content (str/join content-chunk))))
      reply    (fn [content] (send-msg (str "<@" authorid "> " content)))
      commands (p/parse content)]
     (when (and (not bot) commands)
