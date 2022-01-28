@@ -2,14 +2,8 @@
   (:require [clojure.string :as str]
             [clojure.tools.logging.impl :as log]
             [clojure.edn :as edn])
-  (:import java.util.logging.LogRecord
-           java.util.logging.Logger
-           java.util.logging.FileHandler
-           java.util.logging.Formatter
-           java.util.logging.SimpleFormatter
-           java.time.LocalDateTime
-           java.time.Instant
-           java.time.ZoneId
+  (:import [java.util.logging LogRecord Logger FileHandler Formatter SimpleFormatter]
+           [java.time LocalDateTime Instant ZoneId]
            java.time.format.DateTimeFormatter))
 
 (def java-levels {:trace java.util.logging.Level/FINEST
@@ -26,7 +20,9 @@
                     java.util.logging.Level/SEVERE  "ERROR"})
 
 (defn millis-to-localdate [millis]
-  (-> (Instant/ofEpochMilli millis) (.atZone (ZoneId/systemDefault)) (.toLocalDateTime)))
+  (.. (Instant/ofEpochMilli millis)
+      (atZone (ZoneId/systemDefault))
+      (toLocalDateTime)))
 
 (defn file-handler [filename limit cnt append]
   (FileHandler. filename limit cnt append))
@@ -81,8 +77,9 @@
                            (.log logger level message e)
                            (.log logger level message)))) })
           (when handler
-            (.addHandler logger handler)
-            (.setUseParentHandlers logger false))
+            (doto logger
+              (.addHandler handler)
+              (.setUseParentHandlers false)))
 
           (.setLevel logger (get java-levels (:level config) (:level config)))
           logger)))))
