@@ -1,15 +1,16 @@
 (ns tsunbot.lib.anime
   (:gen-class)
-  (:require [clojure.edn :as edn]
-            [clojure.tools.logging :as log]
+  (:require [clojure.tools.logging :as log]
             [clojure.string :as str]
             [clojure.data.json :as json]
             [clojure.set :refer [rename-keys]]
+
+            [tsunbot.config :refer [config]]
             [tsunbot.http :as http])
   (:import java.time.LocalDate
            java.net.URLEncoder))
 
-(def client-id (get-in (edn/read-string (slurp "config.edn")) [:mal :client-id]))
+(def client-id (get-in config [:mal :client-id]))
 
 (def fetch-anilist-airing
   (memoize

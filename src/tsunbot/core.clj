@@ -1,14 +1,12 @@
 (ns tsunbot.core
   (:gen-class)
-  (:require [clojure.edn :as edn]
-            [clojure.core.async :as a]
+  (:require [clojure.core.async :as a]
             [clojure.tools.logging :as log]
 
             [tsunbot.db :as db]
+            [tsunbot.config :refer [config]]
             [tsunbot.commands.dispatch :as cmd]
             [tsunbot.discord :as discord]))
-
-(def config (edn/read-string (slurp "config.edn")))
 
 (defn -main[& args]
   (let

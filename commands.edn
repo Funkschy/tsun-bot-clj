@@ -63,7 +63,12 @@
    :min-args 1
    :max-args 2
    :data     {:succ-fmt "You seem to disagree on %s, %s rated it %d, but %s rated it %d"
-              :err-fmt  "Could not get MAL data. Do all supplied users really exists?"}}}
+              :err-fmt  "Could not get MAL data. Do all supplied users really exists?"}}
+
+  logs
+  {:type     :command
+   :help     "Dump the log files. DON'T USE THIS IN A PUBLIC CHANNEL"
+   :min-role :admin}}
 
  :discord
  {:namespace tsunbot.commands.discord

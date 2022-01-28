@@ -1,7 +1,7 @@
 (ns tsunbot.logging
   (:require [clojure.string :as str]
             [clojure.tools.logging.impl :as log]
-            [clojure.edn :as edn])
+            [tsunbot.config :refer [config]])
   (:import [java.util.logging LogRecord Logger FileHandler Formatter SimpleFormatter]
            [java.time LocalDateTime Instant ZoneId]
            java.time.format.DateTimeFormatter))
@@ -88,7 +88,7 @@
   "Creates a java.util.logging.Logger which respects the tsunbot config. This is necessary,
   because the clojure.tools.logging library does not expose any way to configure the logger"
   []
-  (let [config (:log (edn/read-string (slurp "config.edn")))
+  (let [config (:log config)
         logger (create-logger config)]
     (reify log/LoggerFactory
       (name [_] "java.util.logging")

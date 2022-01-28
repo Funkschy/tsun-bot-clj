@@ -3,9 +3,12 @@
             [clojure.data.json :as json]
             [clojure.tools.logging :as log]
 
+            [tsunbot.config :refer [config]]
             [tsunbot.http :as http]
             [tsunbot.commands.specs :as s]
-            [tsunbot.lib.anime :as anime]))
+            [tsunbot.lib.anime :as anime])
+  (:import [java.io File]
+           [java.nio.file Files Path]))
 
 (defn map-join [separator mapper coll]
   (str/join separator (remove nil? (map mapper coll))))
@@ -87,3 +90,19 @@
 (defn reload-commands [args state env]
   ((:reload-commands env))
   (:succ-fmt state))
+
+(defn logs [args state env]
+  (let [file-pattern    (get-in config [:log :file])
+        pattern-re      (re-pattern (str file-pattern #"(\.\d+)?"))
+        parent-dir      (.. (File. file-pattern) getAbsoluteFile getParentFile toPath)
+        grandparent-dir (.getParent parent-dir)
+        is-log-file?    (fn [^Path p]
+                          (re-matches pattern-re (.toString (.relativize grandparent-dir p))))]
+    (->> (Files/list parent-dir)
+         .iterator
+         iterator-seq
+         (filter is-log-file?)
+         (map (fn [^Path p] (.. p toAbsolutePath toString)))
+         (map slurp)
+         flatten
+         str/join)))
