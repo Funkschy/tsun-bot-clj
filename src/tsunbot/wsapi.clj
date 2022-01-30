@@ -26,7 +26,7 @@
                         :send-msg send-msg
                         :reply send-msg
                         :username "admin"
-                        :authorid 0}))
+                        :authorid "0"}))
   (return-data "waiting..."))
 
 (defn websocket-handler [command-ch request]
