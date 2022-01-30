@@ -8,7 +8,7 @@
             [tsunbot.commands.specs :as s]
             [tsunbot.lib.anime :as anime])
   (:import [java.io File]
-           [java.nio.file Files Path]))
+           [java.nio.file Files Path LinkOption]))
 
 (defn map-join [separator mapper coll]
   (str/join separator (remove nil? (map mapper coll))))
@@ -97,11 +97,13 @@
         parent-dir      (.. (File. file-pattern) getAbsoluteFile getParentFile toPath)
         grandparent-dir (.getParent parent-dir)
         is-log-file?    (fn [^Path p]
-                          (re-matches pattern-re (.toString (.relativize grandparent-dir p))))]
+                          (re-matches pattern-re (.toString (.relativize grandparent-dir p))))
+        last-modified   (fn [^Path p] (Files/getLastModifiedTime p (make-array LinkOption 0)))]
     (->> (Files/list parent-dir)
          .iterator
          iterator-seq
          (filter is-log-file?)
+         (sort-by last-modified)
          (map (fn [^Path p] (.. p toAbsolutePath toString)))
          (map slurp)
          flatten
