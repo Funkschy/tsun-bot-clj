@@ -18,25 +18,31 @@
   (let [sys (system commands)
         cmd (sys command)]
     (when cmd
-      [cmd sys])))
+      [cmd system sys])))
 
 (defn lookup-command [commands command]
   (let [systems (keys commands)
         lookup  (partial lookup-command-in commands command)]
-    (first (filter (comp not nil?) (map lookup systems)))))
+    (into {} (map (fn [[cmd sys-name sys]] [sys-name [cmd sys]]) (remove nil? (map lookup systems))))))
 
+(defn default-system-lookup-order [commands]
+  ; ensure, that general is always last
+  (conj (remove #{:general} (keys commands)) :general))
 
-(defn resolve-command [commands command]
-  ((fn inner [command alias-chain]
-     (let [cmd-sym (symbol command)
-           [cmd-info sys] (lookup-command commands cmd-sym)]
-       (when cmd-info
-         (if (= (:type cmd-info) :alias)
-           (inner (:command cmd-info) (conj alias-chain command))
-           (when-let [function (ns-resolve (:namespace sys) cmd-sym)]
-             [function cmd-info (conj alias-chain command)])))))
+(defn resolve-command
+  ([commands command] (resolve-command commands command (default-system-lookup-order commands)))
+  ([commands command system-lookup-order]
+   ((fn inner [command alias-chain]
+      (let [cmd-sym             (symbol command)
+            command-sys-pairs   (lookup-command commands cmd-sym)
+            [cmd-info sys]      (first (remove nil? (map command-sys-pairs system-lookup-order)))]
+        (when cmd-info
+          (if (= (:type cmd-info) :alias)
+            (inner (:command cmd-info) (conj alias-chain command))
+            (when-let [function (ns-resolve (:namespace sys) cmd-sym)]
+              [function cmd-info (conj alias-chain command)])))))
 
-   command []))
+    command [])))
 
 (def env (atom {:commands        (load-commands)
                 :resolve-command resolve-command
@@ -58,7 +64,9 @@
 
 (defn execute-single [[command & args] context]
   (let [env @env]
-    (if-let [[function cmd-info] (resolve-command (:commands env) command)]
+    (if-let [[function cmd-info] (resolve-command (:commands env)
+                                                  command
+                                                  (list (:system context) :general))]
       (cond
         (not (user/has-sufficient-rights (:authorid context) (:min-role cmd-info)))
         {:error (str (:username context) " has insufficient rights")}
@@ -88,7 +96,7 @@
 
 (defn dispatcher [command-ch]
   (loop []
-    (when-let [{:keys [commands username authorid reply] :as context} (a/<!! command-ch)]
+    (when-let [{:keys [commands authorid reply] :as context} (a/<!! command-ch)]
       (when-not (and (= (first (first commands)) "quit")
                      (user/has-sufficient-rights authorid :admin))
         (future
