@@ -18,5 +18,6 @@
 
 (defn has-sufficient-rights [userid min-role]
   (if min-role
-    (>= (get-num-role userid) (roles min-role))
+    (or (zero? userid) ; 0 is a special id, which is only valid in the admin interface
+        (>= (get-num-role userid) (roles min-role)))
     true))

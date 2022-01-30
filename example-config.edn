@@ -6,4 +6,5 @@
        :date-time-formatter "yyyy-MM-dd HH:mm:ss"}
  :discord {:token   ""
            :intents #{:guilds :guild-messages :direct-messages}}
+ :web {:port 9090}
  :mal {:client-id ""}}
