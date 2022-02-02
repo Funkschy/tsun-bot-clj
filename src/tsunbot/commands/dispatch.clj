@@ -5,6 +5,7 @@
             [clojure.tools.logging :as log]
             [clojure.core.async :as a]
 
+            [tsunbot.common :refer [select-relevant levenshtein]]
             [tsunbot.user :as user]
             [tsunbot.commands.general]
             [tsunbot.commands.discord]
@@ -56,17 +57,25 @@
     (f (count args) (k cmd-info))
     true))
 
-(defn select-relevant [m ks]
-  (if ks (select-keys m ks) {}))
-
 (defn add-data [cmd-info context]
   (if (:data cmd-info) (conj context (:data cmd-info)) context))
 
+(def string-dist (memoize levenshtein))
+
+(defn did-you-mean-string [command commands limit]
+  (let [cmd-names   (map str (filter symbol? (flatten (map keys (vals commands)))))
+        suggestions (filter #(< (second %) limit)
+                            (map #(vector % (string-dist command %)) cmd-names))
+        closest   (if (> (count suggestions) 1)
+                    (reduce (partial min-key second) suggestions)
+                    (first suggestions))]
+    (and closest (str ", did you mean '!" (first closest) "'?"))))
+
 (defn execute-single [[command & args] context]
-  (let [env @env]
-    (if-let [[function cmd-info] (resolve-command (:commands env)
-                                                  command
-                                                  (list (:system context) :general))]
+  (let [env          @env
+        commands     (:commands env)
+        lookup-order (list (:system context) :general)]
+    (if-let [[function cmd-info] (resolve-command commands command lookup-order)]
       (cond
         (not (user/has-sufficient-rights (:authorid context) (:min-role cmd-info)))
         {:error (str (:username context) " has insufficient rights")}
@@ -76,7 +85,8 @@
         (function args (add-data cmd-info context) (select-keys env (:needs cmd-info)))
 
         :else {:error  (str "Wrong number of args for " command ": " args)})
-      {:error (str "No command called " command)})))
+      {:error (str "No command called " command
+                   (or (did-you-mean-string command commands 4) ""))})))
 
 (defn add-args [cmd piped-args]
   (if (nil? piped-args)
