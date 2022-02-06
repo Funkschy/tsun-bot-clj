@@ -12,40 +12,38 @@
 
 (def client-id (get-in config [:mal :client-id]))
 
-(def fetch-anilist-airing
-  (memoize
-    (fn [year season]
-      (let
-        [airing-eps-query
-         (str/join \space
-                   ["query media("
-                    "$page: Int = 1,"
-                    "$type: MediaType,"
-                    "$season: MediaSeason,"
-                    "$year: String,"
-                    "$sort: [MediaSort] = [POPULARITY_DESC, SCORE_DESC]) {"
-                    "Page(page: $page, perPage: 100) {"
-                    "media(type: $type, season: $season, startDate_like: $year, sort: $sort) {"
-                    "mal_id:idMal"
-                    "episodes"
-                    "nextAiringEpisode { airingAt timeUntilAiring episode }"
-                    "}}}"])
-         params {"query" airing-eps-query
-                 "variables" {"season" (str/upper-case season)
-                              "type"   "ANIME"
-                              "year"   (str year \%)}}]
-        (try
-          (log/info "fetching airing anime for" season year)
-          (let [res (http/post-req "https://graphql.anilist.co"
-                                   {"Content-Type" "application/json"}
-                                   (json/write-str params))]
-            (when (not= 200 (.statusCode res))
-              (log/error (str "Could not get anilist data " (.statusCode res) " " (.body res))))
-            (get-in (-> res .body json/read-str)
-                    ["data" "Page" "media"]))
-          (catch Exception e
-            (log/error e)
-            nil))))))
+(defn fetch-anilist-airing [year season]
+  (let
+    [airing-eps-query
+     (str/join \space
+               ["query media("
+                "$page: Int = 1,"
+                "$type: MediaType,"
+                "$season: MediaSeason,"
+                "$year: String,"
+                "$sort: [MediaSort] = [POPULARITY_DESC, SCORE_DESC]) {"
+                "Page(page: $page, perPage: 100) {"
+                "media(type: $type, season: $season, startDate_like: $year, sort: $sort) {"
+                "mal_id:idMal"
+                "episodes"
+                "nextAiringEpisode { airingAt timeUntilAiring episode }"
+                "}}}"])
+     params {"query" airing-eps-query
+             "variables" {"season" (str/upper-case season)
+                          "type"   "ANIME"
+                          "year"   (str year \%)}}]
+    (try
+      (log/info "fetching airing anime for" season year)
+      (let [res (http/post-req "https://graphql.anilist.co"
+                               {"Content-Type" "application/json"}
+                               (json/write-str params))]
+        (when (not= 200 (.statusCode res))
+          (log/error (str "Could not get anilist data " (.statusCode res) " " (.body res))))
+        (get-in (-> res .body json/read-str)
+                ["data" "Page" "media"]))
+      (catch Exception e
+        (log/error e)
+        nil))))
 
 (defn current-episode [anime-info]
   (if (anime-info "nextAiringEpisode")
@@ -126,7 +124,7 @@
              (filter (comp not zero? :behind)))))
 
     (catch Exception e
-      (log/info e)
+      (log/error e)
       nil)))
 
 (defn fetch-common-anime [users]
